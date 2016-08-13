@@ -2,6 +2,7 @@
 name = "rewrite"
 version = "0.1.0"
 authors = ["Wilfred Hughes <me@wilfred.me.uk>"]
+license = "Apache-2.0/MIT"
 
 [dependencies]
 syntex_syntax = "*"
