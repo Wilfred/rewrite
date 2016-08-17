@@ -29,6 +29,8 @@ struct SplicePosition {
     continue_from: BytePos,
 }
 
+// TODO: name this 'RenameLet' to avoid confusion with bindings
+// introduced via match?
 trait RenameLocalDef<T> {
     fn rename_local(&self, old: String, new: String) -> Vec<SplicePosition>;
 }
