@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use syntax::ast;
 use syntax::ptr::P;
-use syntax::codemap::{CodeMap, BytePos};
+use syntax::codemap::{CodeMap, Span, BytePos, NO_EXPANSION};
 use syntax::errors::Handler;
 use syntax::errors::emitter::ColorConfig;
 use syntax::parse::{self, ParseSess, PResult};
@@ -27,6 +27,26 @@ struct SplicePosition {
     keep_to: BytePos,
     new_text: String,
     continue_from: BytePos,
+}
+
+fn str_after_splice(codemap: &CodeMap, span: &Span, splice: &SplicePosition) -> String {
+    let before_span = Span {
+        lo: span.lo,
+        hi: splice.keep_to,
+        // placeholder value:
+        expn_id: NO_EXPANSION,
+    };
+    let after_span = Span {
+        lo: splice.continue_from,
+        hi: span.hi,
+        // placeholder value:
+        expn_id: NO_EXPANSION,
+    };
+
+    let before_text = codemap.span_to_snippet(before_span).unwrap();
+    let after_text = codemap.span_to_snippet(after_span).unwrap();
+
+    return before_text + &splice.new_text + &after_text;
 }
 
 // TODO: name this 'RenameLet' to avoid confusion with bindings
@@ -62,7 +82,7 @@ impl RenameLocalDef<ast::DeclKind> for ast::DeclKind {
 
 fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
     for item in items {
-        println!("{}", codemap.span_to_snippet(item.span).unwrap());
+        println!("item text: {:?}", codemap.span_to_snippet(item.span).unwrap());
         match item.node {
             ast::ItemKind::Fn(_, _, _, _, _, ref block) => {
                 for stmt in &block.stmts {
@@ -71,7 +91,16 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
                     match &stmt.node {
                         &ast::StmtKind::Decl(ref decl, _) => {
                             println!("decl: {:?}", decl);
-                            println!("rename pos: {:?}", decl.node.rename_local("x".to_owned(), "xxx".to_owned()));
+                            let rename_pos = decl.node.rename_local("x".to_owned(), "xxx".to_owned());
+
+                            if rename_pos.len() == 1 {
+                                println!("rename pos: {:?}", rename_pos[0]);
+
+                                let after_splice = str_after_splice(codemap, &item.span, &rename_pos[0]);
+                                println!("AFTER SPLICE ---");
+                                println!("{}", after_splice);
+                                println!("----------------");
+                            }
                         }
                         _ => {}
                     }
