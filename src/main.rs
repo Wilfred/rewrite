@@ -26,8 +26,28 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
     for item in items {
         println!("{}", codemap.span_to_snippet(item.span).unwrap());
         match item.node {
-            ast::ItemKind::Fn(ref fn_decl, _, _, _, _, ref block) => {
-                println!("fn_decl: {:?}\nblock: {:?}\n\n", fn_decl, block);
+            ast::ItemKind::Fn(_, _, _, _, _, ref block) => {
+                for stmt in &block.stmts {
+                    println!("from span: {:?}",
+                             codemap.span_to_snippet(stmt.span).unwrap());
+                    match &stmt.node {
+                        &ast::StmtKind::Decl(ref decl, _) => {
+                            match (**decl).node {
+                                ast::DeclKind::Local(ref local) => {
+                                    match local.pat.node {
+                                        ast::PatKind::Ident(_, ref ident, _) => {
+                                            println!("ident: {:?}", ident.node.name.as_str());
+                                        }
+                                        _ => {}
+                                    }
+                                    println!("local: {:?}", local);
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
             ast::ItemKind::Impl(..) => {
                 println!("TODO: impl");
