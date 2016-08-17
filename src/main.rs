@@ -22,10 +22,40 @@ fn parse_file<'a>(path: &Path, parse_session: &'a ParseSess) -> PResult<'a, ast:
     parse::parse_crate_from_file(path, Vec::new(), &parse_session)
 }
 
+#[derive(Debug)]
 struct SplicePosition {
     keep_to: BytePos,
     new_text: String,
     continue_from: BytePos,
+}
+
+trait RenameLocalDef<T> {
+    fn rename_local(&self, old: String, new: String) -> Vec<SplicePosition>;
+}
+
+impl RenameLocalDef<ast::DeclKind> for ast::DeclKind {
+    // TODO: take a BytePos so we know *which* local we want to
+    // rename.
+    fn rename_local(&self, old: String, new: String) -> Vec<SplicePosition> {
+        match *self {
+            ast::DeclKind::Local(ref local) => {
+                match local.pat.node {
+                    ast::PatKind::Ident(_, ref ident, _) => {
+                        if *ident.node.name.as_str() == old {
+                            return vec![SplicePosition {
+                                            keep_to: ident.span.lo,
+                                            new_text: new.clone(),
+                                            continue_from: ident.span.hi,
+                                        }];
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+        vec![]
+    }
 }
 
 fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
@@ -38,18 +68,8 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
                              codemap.span_to_snippet(stmt.span).unwrap());
                     match &stmt.node {
                         &ast::StmtKind::Decl(ref decl, _) => {
-                            match (**decl).node {
-                                ast::DeclKind::Local(ref local) => {
-                                    match local.pat.node {
-                                        ast::PatKind::Ident(_, ref ident, _) => {
-                                            println!("ident: {:?}", ident.node.name.as_str());
-                                        }
-                                        _ => {}
-                                    }
-                                    println!("local: {:?}", local);
-                                }
-                                _ => {}
-                            }
+                            println!("decl: {:?}", decl);
+                            println!("rename pos: {:?}", decl.node.rename_local("x".to_owned(), "xxx".to_owned()));
                         }
                         _ => {}
                     }
