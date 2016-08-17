@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use syntax::ast;
 use syntax::ptr::P;
-use syntax::codemap::CodeMap;
+use syntax::codemap::{CodeMap, BytePos};
 use syntax::errors::Handler;
 use syntax::errors::emitter::ColorConfig;
 use syntax::parse::{self, ParseSess, PResult};
@@ -20,6 +20,12 @@ fn new_parse_session(codemap: Rc<CodeMap>) -> ParseSess {
 // Copied shamelessly from format_input in rustfmt.
 fn parse_file<'a>(path: &Path, parse_session: &'a ParseSess) -> PResult<'a, ast::Crate> {
     parse::parse_crate_from_file(path, Vec::new(), &parse_session)
+}
+
+struct SplicePosition {
+    keep_to: BytePos,
+    new_text: String,
+    continue_from: BytePos,
 }
 
 fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
