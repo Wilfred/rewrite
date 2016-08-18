@@ -86,8 +86,7 @@ impl RenameLocalDef<ast::DeclKind> for ast::DeclKind {
             ast::DeclKind::Local(ref local) => {
                 match local.pat.node {
                     ast::PatKind::Ident(_, ref ident, _) => {
-                        let ident_span = ident.span;
-                        if ident_span.lo <= pos && pos <= ident_span.hi {
+                        if ident.span.lo <= pos && pos <= ident.span.hi {
                             return vec![SplicePosition {
                                             keep_to: ident.span.lo,
                                             new_text: new.clone(),
