@@ -105,7 +105,8 @@ impl RenameLocalDef<ast::DeclKind> for ast::DeclKind {
 
 fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
     for item in items {
-        println!("item text: {:?}", codemap.span_to_snippet(item.span).unwrap());
+        println!("item text: {:?}",
+                 codemap.span_to_snippet(item.span).unwrap());
         match item.node {
             ast::ItemKind::Fn(_, _, _, _, _, ref block) => {
                 for stmt in &block.stmts {
@@ -114,7 +115,8 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
                     match &stmt.node {
                         &ast::StmtKind::Decl(ref decl, _) => {
                             println!("decl: {:?}", decl);
-                            let rename_pos = decl.node.rename_local("x".to_owned(), "xxx".to_owned());
+                            let rename_pos = decl.node
+                                .rename_local("x".to_owned(), "xxx".to_owned());
 
                             if rename_pos.len() == 1 {
                                 println!("rename pos: {:?}", rename_pos[0]);
