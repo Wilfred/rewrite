@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use syntax::ast;
 use syntax::ptr::P;
-use syntax::codemap::{CodeMap, Span, BytePos, NO_EXPANSION};
+use syntax::codemap::{CodeMap, Span, BytePos, Pos, NO_EXPANSION};
 use syntax::errors::Handler;
 use syntax::errors::emitter::ColorConfig;
 use syntax::parse::{self, ParseSess, PResult};
@@ -37,7 +37,7 @@ fn str_after_splice(codemap: &CodeMap,
 
     let mut result = String::new();
     let mut lo = enclosing_span.lo;
-    let mut hi = splices[0].keep_to;
+    let mut hi;
 
     // For every splice,
     for splice in splices {
@@ -75,18 +75,19 @@ fn str_after_splice(codemap: &CodeMap,
 // TODO: name this 'RenameLet' to avoid confusion with bindings
 // introduced via match?
 trait RenameLocalDef<T> {
-    fn rename_local(&self, old: String, new: String) -> Vec<SplicePosition>;
+    fn rename_local(&self, pos: BytePos, new: String) -> Vec<SplicePosition>;
 }
 
 impl RenameLocalDef<ast::DeclKind> for ast::DeclKind {
     // TODO: take a BytePos so we know *which* local we want to
     // rename.
-    fn rename_local(&self, old: String, new: String) -> Vec<SplicePosition> {
+    fn rename_local(&self, pos: BytePos, new: String) -> Vec<SplicePosition> {
         match *self {
             ast::DeclKind::Local(ref local) => {
                 match local.pat.node {
                     ast::PatKind::Ident(_, ref ident, _) => {
-                        if *ident.node.name.as_str() == old {
+                        let ident_span = ident.span;
+                        if ident_span.lo <= pos && pos <= ident_span.hi {
                             return vec![SplicePosition {
                                             keep_to: ident.span.lo,
                                             new_text: new.clone(),
@@ -116,7 +117,7 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
                         &ast::StmtKind::Decl(ref decl, _) => {
                             println!("decl: {:?}", decl);
                             let rename_pos = decl.node
-                                .rename_local("x".to_owned(), "xxx".to_owned());
+                                .rename_local(BytePos::from_usize(93), "xxx".to_owned());
 
                             if rename_pos.len() == 1 {
                                 println!("rename pos: {:?}", rename_pos[0]);
