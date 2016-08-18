@@ -29,24 +29,47 @@ struct SplicePosition {
     continue_from: BytePos,
 }
 
-fn str_after_splice(codemap: &CodeMap, span: &Span, splice: &SplicePosition) -> String {
-    let before_span = Span {
-        lo: span.lo,
-        hi: splice.keep_to,
-        // placeholder value:
-        expn_id: NO_EXPANSION,
-    };
-    let after_span = Span {
-        lo: splice.continue_from,
-        hi: span.hi,
-        // placeholder value:
+fn str_after_splice(codemap: &CodeMap,
+                    enclosing_span: &Span,
+                    splices: &[SplicePosition])
+                    -> String {
+    assert!(splices.len() > 0);
+
+    let mut result = String::new();
+    let mut lo = enclosing_span.lo;
+    let mut hi = splices[0].keep_to;
+
+    // For every splice,
+    for splice in splices {
+        hi = splice.keep_to;
+
+        let span = Span {
+            lo: lo,
+            hi: hi,
+            // Placeholder value.
+            expn_id: NO_EXPANSION,
+        };
+
+        // Append all the text before the splice point.
+        result = result + &codemap.span_to_snippet(span).unwrap();
+
+        // Now splice in the text we want.
+        result = result + &splice.new_text;
+
+        lo = splice.continue_from;
+    }
+
+    // Finally, append the text after the final splice.
+    let ref final_splice = splices[splices.len() - 1];
+    let span = Span {
+        lo: final_splice.continue_from,
+        hi: enclosing_span.hi,
         expn_id: NO_EXPANSION,
     };
 
-    let before_text = codemap.span_to_snippet(before_span).unwrap();
-    let after_text = codemap.span_to_snippet(after_span).unwrap();
+    result = result + &codemap.span_to_snippet(span).unwrap();
 
-    return before_text + &splice.new_text + &after_text;
+    result
 }
 
 // TODO: name this 'RenameLet' to avoid confusion with bindings
@@ -96,7 +119,8 @@ fn print_all_items(items: &Vec<P<ast::Item>>, codemap: &CodeMap) {
                             if rename_pos.len() == 1 {
                                 println!("rename pos: {:?}", rename_pos[0]);
 
-                                let after_splice = str_after_splice(codemap, &item.span, &rename_pos[0]);
+                                let after_splice =
+                                    str_after_splice(codemap, &item.span, &rename_pos[..]);
                                 println!("AFTER SPLICE ---");
                                 println!("{}", after_splice);
                                 println!("----------------");
